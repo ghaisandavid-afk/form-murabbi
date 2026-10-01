@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f1f5f2; font-family: Arial, Helvetica, sans-serif; color: #1f2937; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 20px 14px 40px; }
+    .card { background: #fff; border-radius: 12px; padding: 22px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    h1 { margin: 0 0 4px; font-size: 22px; color: #166534; }
+    p.sub { margin: 0 0 20px; color: #6b7280; font-size: 14px; }
+    label { display: block; font-weight: 600; font-size: 14px; margin: 16px 0 6px; }
+    .req { color: #dc2626; }
+    input, textarea { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; font-family: inherit; }
+    select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; font-family: inherit; background: #fff; }
+    select:focus, input:focus, textarea:focus { outline: 2px solid #86efac; border-color: #16a34a; }
+    textarea { min-height: 90px; resize: vertical; }
+    small { color: #6b7280; font-size: 12px; }
+    button { margin-top: 22px; width: 100%; padding: 12px; background: #16a34a; color: #fff; border: 0; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    button:disabled { background: #9ca3af; cursor: wait; }
+    .baris { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+    .baris input.n { flex: 3; }
+    .baris .m { flex: 2; }
+    .baris .hapus { margin: 0; width: 40px; padding: 10px 0; background: #fee2e2; color: #991b1b; }
+    button.sekunder { margin-top: 10px; background: #e5e7eb; color: #166534; }
+    #pesan { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: 14px; display: none; }
+    .ok { background: #dcfce7; color: #166534; }
+    .err { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Form Data Pembina KKI</h1>
+      <p class="sub">Mohon isi data berikut dengan lengkap. Tanda <span class="req">*</span> wajib diisi.</p>
+
+      <form id="frm" onsubmit="return kirim(event)">
+        <label for="nama">Nama <span class="req">*</span></label>
+        <input id="nama" type="text" required>
+
+        <label for="alamat">Alamat <span class="req">*</span></label>
+        <textarea id="alamat" required></textarea>
+
+        <label for="pekerjaan">Pekerjaan Utama <span class="req">*</span></label>
+        <input id="pekerjaan" type="text" required>
+
+        <label>KKI Binaan yang Masih Aktif <span class="req">*</span></label>
+        <small>Isi nama KKI binaan dan tingkat marhalahnya. Klik "Tambah KKI" untuk menambah baris.</small>
+        <div id="daftarKki"></div>
+        <button type="button" id="tambah" class="sekunder" onclick="tambahBaris()">+ Tambah KKI</button>
+
+        <label for="jadwal">Jadwal GSD KKI <span class="req">*</span></label>
+        <textarea id="jadwal" required placeholder="Contoh: Senin, 19.30 WITA, rumah Ust. A"></textarea>
+        <small>Jika lebih dari satu jadwal, tulis per baris.</small>
+
+        <label for="masalah">Masalah yang Dihadapi dalam Kegiatan Tarbiyah</label>
+        <textarea id="masalah"></textarea>
+
+        <button id="btn" type="submit">Kirim</button>
+        <div id="pesan"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // GANTI dengan URL Web App Apps Script Anda (yang berakhiran /exec)
+    var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyVsvNgrHIrykrxzWVaB7R4pkinAFeqwR3b5EM2Cdc/exec';
+
+    function tampil(teks, ok) {
+      var p = document.getElementById('pesan');
+      p.textContent = teks;
+      p.className = ok ? 'ok' : 'err';
+      p.style.display = 'block';
+    }
+
+    function tambahBaris() {
+      var div = document.createElement('div');
+      div.className = 'baris';
+      div.innerHTML =
+        '<input class="n" type="text" placeholder="Nama KKI binaan">' +
+        '<select class="m">' +
+          '<option value="">Pilih marhalah</option>' +
+          '<option value="Ta\'rif 1">Ta\'rif 1</option>' +
+          '<option value="Ta\'rif 2">Ta\'rif 2</option>' +
+          '<option value="Takwin 1">Takwin 1</option>' +
+          '<option value="Takwin 2">Takwin 2</option>' +
+        '</select>' +
+        '<button type="button" class="hapus" title="Hapus" onclick="hapusBaris(this)">&times;</button>';
+      document.getElementById('daftarKki').appendChild(div);
+    }
+
+    function hapusBaris(el) {
+      var wadah = document.getElementById('daftarKki');
+      if (wadah.children.length > 1) wadah.removeChild(el.parentNode);
+    }
+
+    function ambilKki() {
+      var hasil = [];
+      var rows = document.querySelectorAll('#daftarKki .baris');
+      for (var i = 0; i < rows.length; i++) {
+        hasil.push({
+          nama: rows[i].querySelector('.n').value,
+          marhalah: rows[i].querySelector('.m').value
+        });
+      }
+      return hasil;
+    }
+
+    function resetKki() {
+      document.getElementById('daftarKki').innerHTML = '';
+      tambahBaris();
+    }
+
+    tambahBaris();
+
+    function kirim(e) {
+      e.preventDefault();
+      var btn = document.getElementById('btn');
+      var data = {
+        nama: document.getElementById('nama').value,
+        alamat: document.getElementById('alamat').value,
+        pekerjaan: document.getElementById('pekerjaan').value,
+        kki: ambilKki(),
+        jadwal: document.getElementById('jadwal').value,
+        masalah: document.getElementById('masalah').value
+      };
+      btn.disabled = true;
+      btn.textContent = 'Mengirim...';
+      fetch(WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(data)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          btn.disabled = false;
+          btn.textContent = 'Kirim';
+          if (res.ok) {
+            document.getElementById('frm').reset();
+            resetKki();
+            tampil('Jazakumullahu khairan, data Anda sudah tersimpan.', true);
+            window.scrollTo(0, 0);
+          } else {
+            tampil(res.error || 'Terjadi kesalahan, coba lagi.', false);
+          }
+        })
+        .catch(function () {
+          btn.disabled = false;
+          btn.textContent = 'Kirim';
+          tampil('Gagal terhubung ke server. Periksa koneksi lalu coba lagi.', false);
+        });
+      return false;
+    }
+  </script>
+</body>
+</html>
